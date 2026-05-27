@@ -17,6 +17,7 @@ export default async function DemoPage() {
       <p className="text-sm text-gray-500">
         Page rendue sur le serveur. Refresh pour voir l'heure changer.
       </p>
+      <li><a className="underline" href="/chat">Chat (S2)</a></li>
       <EchoForm />
     </main>
   );
