@@ -5,6 +5,8 @@ export default function Home() {
       <ul className="mt-4 list-disc list-inside">
         <li><a className="underline" href="/demo">Server Component + Action</a></li>
         <li><a className="underline" href="/streaming">Suspense streaming</a></li>
+        <li><a className="underline" href="/chat">Chat (S2)</a></li>
+        <li><a className="underline" href="/prompt-lab">Prompt Lab (S3)</a></li>
       </ul>
     </main>
   );
