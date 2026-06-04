@@ -1,79 +1,137 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 type Provider = 'anthropic' | 'openai';
 
+const PROVIDER_LABEL: Record<Provider, string> = {
+  anthropic: 'Claude Sonnet 4.5',
+  openai: 'GPT-4o',
+};
+
 export default function ChatPage() {
   const [provider, setProvider] = useState<Provider>('anthropic');
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status, setMessages } = useChat();
   const [input, setInput] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll en bas pendant le streaming
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, status]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || status === 'streaming') return;
-    // ↓ on passe le provider au moment de l'envoi
+    if (!input.trim() || status === 'streaming' || status === 'submitted') return;
     sendMessage({ text: input }, { body: { provider } });
     setInput('');
   };
 
+  const isBusy = status === 'streaming' || status === 'submitted';
+
   return (
-    <main className="max-w-2xl mx-auto p-4 h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Chat — warmup S2</h1>
-        <select
-          value={provider}
-          onChange={e => setProvider(e.target.value as Provider)}
-          className="border rounded px-2 py-1"
-          disabled={status === 'streaming'}
-        >
-          <option value="anthropic">Claude Sonnet 4.5</option>
-          <option value="openai">GPT-4o</option>
-        </select>
-      </div>
-
-      <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-        {messages.map(m => (
-          <div
-            key={m.id}
-            className={`p-3 rounded-lg ${
-              m.role === 'user' ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
-            }`}
+    <main className="max-w-2xl mx-auto p-4 h-screen flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Chat</h1>
+        <div className="flex items-center gap-2">
+          <Select
+            value={provider}
+            onValueChange={v => setProvider(v as Provider)}
+            disabled={isBusy}
           >
-            <p className="text-xs font-semibold mb-1 opacity-60">
-              {m.role === 'user' ? 'Toi' : 'Assistant'}
-            </p>
-            {m.parts.map((part, i) =>
-              part.type === 'text' ? (
-                <p key={i} className="whitespace-pre-wrap">
-                  {part.text}
-                </p>
-              ) : null
-            )}
-          </div>
-        ))}
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="anthropic">Claude Sonnet 4.5</SelectItem>
+              <SelectItem value="openai">GPT-4o</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {status === 'streaming' && (
-          <p className="text-sm text-gray-500 italic">L'assistant rédige...</p>
-        )}
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMessages([])}
+              disabled={isBusy}
+            >
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Zone messages */}
+      <ScrollArea className="flex-1 pr-4">
+        {messages.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-center text-muted-foreground">
+            <div className="space-y-2">
+              <p className="text-sm">Démarre la conversation avec {PROVIDER_LABEL[provider]}.</p>
+              <p className="text-xs">Tes messages ne sont pas persistés (M2 ajoutera ça).</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map(m => (
+              <Card
+                key={m.id}
+                className={`p-3 ${
+                  m.role === 'user'
+                    ? 'ml-12 bg-primary/5'
+                    : 'mr-12'
+                }`}
+              >
+                <Badge variant="outline" className="mb-2 text-xs">
+                  {m.role === 'user' ? 'Toi' : 'Assistant'}
+                </Badge>
+                {m.parts.map((part, i) =>
+                  part.type === 'text' ? (
+                    <p key={i} className="whitespace-pre-wrap text-sm">
+                      {part.text}
+                    </p>
+                  ) : null
+                )}
+              </Card>
+            ))}
+
+            {isBusy && (
+              <p className="text-sm text-muted-foreground italic pl-3">
+                {PROVIDER_LABEL[provider]} rédige
+                <span className="inline-block animate-pulse">...</span>
+              </p>
+            )}
+
+            <div ref={scrollRef} />
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Input */}
       <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
+        <Input
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Ton message..."
-          disabled={status === 'streaming'}
-          className="flex-1 border rounded px-3 py-2 disabled:opacity-50"
+          disabled={isBusy}
+          autoFocus
         />
-        <button
-          type="submit"
-          disabled={status === 'streaming' || !input.trim()}
-          className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-        >
-          Envoyer
-        </button>
+        <Button type="submit" disabled={isBusy || !input.trim()}>
+          {isBusy ? 'Envoi...' : 'Envoyer'}
+        </Button>
       </form>
     </main>
   );

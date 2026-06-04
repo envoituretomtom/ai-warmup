@@ -2,6 +2,18 @@
 
 import { useState } from 'react';
 import { TaskId, VariantId, ProviderId, PromptResult } from '@/prompts/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const TASKS: { id: TaskId; label: string; placeholder: string }[] = [
   { id: 'classify', label: 'Classify', placeholder: "Bonjour, je veux annuler ma leçon de demain..." },
@@ -42,74 +54,91 @@ export default function PromptLabPage() {
   };
 
   return (
-    <main className="max-w-3xl mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Prompt Lab — S3</h1>
-      <p className="text-sm text-gray-500">
-        Compare prompts naïfs, structurés et few-shot sur 3 tâches × 2 providers.
-      </p>
-
-      <div className="grid grid-cols-3 gap-3">
-        <label className="space-y-1">
-          <span className="text-sm font-semibold">Task</span>
-          <select value={task} onChange={e => setTask(e.target.value as TaskId)} className="w-full border rounded px-2 py-1">
-            {TASKS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-sm font-semibold">Variant</span>
-          <select value={variant} onChange={e => setVariant(e.target.value as VariantId)} className="w-full border rounded px-2 py-1">
-            <option value="naive">Naïf</option>
-            <option value="structured">Structured</option>
-            <option value="fewshot">Few-shot</option>
-          </select>
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-sm font-semibold">Provider</span>
-          <select value={provider} onChange={e => setProvider(e.target.value as ProviderId)} className="w-full border rounded px-2 py-1">
-            <option value="anthropic">Claude Sonnet 4.5</option>
-            <option value="openai">GPT-4o</option>
-          </select>
-        </label>
+    <main className="max-w-3xl mx-auto p-4 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Prompt Lab</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Compare prompts naïfs, structurés et few-shot sur 3 tâches × 2 providers.
+        </p>
       </div>
 
-      <textarea
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        placeholder={placeholder}
-        rows={5}
-        className="w-full border rounded px-3 py-2 font-mono text-sm"
-      />
+      <Card className="p-4 space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">Task</label>
+            <Select value={task} onValueChange={v => setTask(v as TaskId)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TASKS.map(t => (
+                  <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <button
-        onClick={handleRun}
-        disabled={loading || !input.trim()}
-        className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {loading ? 'Exécution...' : 'Run'}
-      </button>
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">Variant</label>
+            <Select value={variant} onValueChange={v => setVariant(v as VariantId)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="naive">Naïf</SelectItem>
+                <SelectItem value="structured">Structured</SelectItem>
+                <SelectItem value="fewshot">Few-shot</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {error && <p className="text-red-600 text-sm">Erreur : {error}</p>}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold">Provider</label>
+            <Select value={provider} onValueChange={v => setProvider(v as ProviderId)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="anthropic">Claude Sonnet 4.5</SelectItem>
+                <SelectItem value="openai">GPT-4o</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder={placeholder}
+          rows={5}
+          className="font-mono text-sm"
+        />
+
+        <Button onClick={handleRun} disabled={loading || !input.trim()}>
+          {loading ? 'Exécution...' : 'Run'}
+        </Button>
+      </Card>
+
+      {error && (
+        <Card className="p-4 border-destructive">
+          <p className="text-destructive text-sm">Erreur : {error}</p>
+        </Card>
+      )}
 
       {result && (
-        <div className="space-y-3 mt-4">
-          <div className="border rounded p-3">
-            <p className="text-xs font-semibold text-gray-500 mb-1">OUTPUT</p>
-            <pre className="text-sm whitespace-pre-wrap font-mono">
+        <Card className="p-4 space-y-4">
+          <div>
+            <Badge variant="outline" className="mb-2">OUTPUT</Badge>
+            <pre className="text-sm whitespace-pre-wrap font-mono bg-muted p-3 rounded">
               {typeof result.output === 'string'
                 ? result.output
                 : JSON.stringify(result.output, null, 2)}
             </pre>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-sm">
+          <Separator />
+
+          <div className="grid grid-cols-4 gap-3 text-sm">
             <Stat label="Input tokens" value={result.inputTokens} />
             <Stat label="Output tokens" value={result.outputTokens} />
             <Stat label="Latency" value={`${result.latencyMs} ms`} />
             <Stat label="Cost" value={`$${result.costUsd.toFixed(5)}`} />
           </div>
-        </div>
+        </Card>
       )}
     </main>
   );
@@ -117,8 +146,8 @@ export default function PromptLabPage() {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="border rounded p-2">
-      <p className="text-xs text-gray-500">{label}</p>
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-mono">{value}</p>
     </div>
   );
